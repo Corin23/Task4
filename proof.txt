@@ -1,0 +1,157 @@
+SSH: 
+ qemu-system-x86_64 -enable-kvm -boot menu=on -drive file=Fedora.img -m 2G -cpu host -smp 2 -vga virtio -display sdl,gl=on -net user,hostname=corindobrica,hostfwd=tcp::6001-:22 -net nic
+ 
+ ssh -p 6001 corindobrica@localhost
+The authenticity of host '[localhost]:6001 ([127.0.0.1]:6001)' can't be established.
+ED25519 key fingerprint is SHA256:++gm+b5ioL80eqkIZNaaUSmEd7s41qUP2W2P43/b2qs.
+This key is not known by any other names
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '[localhost]:6001' (ED25519) to the list of known hosts.
+corindobrica@localhost's password: 
+Last login: Mon Jul 25 14:51:22 2022 from ::1
+[corindobrica@corindobrica ~]$ ls
+Desktop  Documents  Downloads  Music  Pictures  Public  Templates  Videos
+
+
+SCP:
+
+corin@otp-cdobrica-l1:~/Desktop/Task4$ scp -P 6001 proof.txt corindobrica@localhost:/home/corindobrica/Desktop
+corindobrica@localhost's password: 
+proof.txt                                     100%  887   752.7KB/s   00:00 
+
+
+corin@otp-cdobrica-l1:~/Desktop/Task4$ scp -P 6001 proof.txt corindobrica@localhost:/home/corindobrica/Desktop
+corindobrica@localhost's password: 
+proof.txt                                     100%  887   752.7KB/s   00:00 
+
+VNC setup:
+
+sudo dnf install @xfce-desktop-environment
+sudo dnf install tigervnc-server 
+sudo firewall-cmd --add-service=vnc-server --permanent
+success
+sudo firewall-cmd --reload
+success
+
+su - myvnc -> vnc user
+vncpasswd 
+Password:
+Verify:
+No view only password
+
+cd /usr/lib/systemd/system
+touch vncserver@:1.service -> service file 
+[Service]
+ExecStart=/usr/bin/vncserver -geometry 1800x1000 -depth 16 -dpi 120 -alwayssharing -rfbauth /home/myvnc/.vnc/passwd %i
+
+systemctl daemon-reload
+systemctl enable vncserver@:1.service
+systemctl start vncserver@:1.service
+
+corin@otp-cdobrica-l1:~/Documents/VirtualMachines$ qemu-system-x86_64 -enable-kvm -boot menu=on -drive file=Fedora.img -m 2G -cpu host -smp 2 -vga virtio -display sdl,gl=on -net user,hostname=corindobrica,hostfwd=tcp::6001-:22,hostfwd=tcp::6969-:5901 -net nic
+
+
+corin@otp-cdobrica-l1:~$ vncviewer localhost:6969
+
+TigerVNC Viewer 64-bit v1.12.0
+Built on: 2022-03-25 17:06
+Copyright (C) 1999-2021 TigerVNC Team and many others (see README.rst)
+See https://www.tigervnc.org for information on TigerVNC.
+
+Tue Jul 26 12:42:43 2022
+ DecodeManager: Detected 8 CPU core(s)
+ DecodeManager: Creating 4 decoder thread(s)
+ CConn:       Connected to host localhost port 6969
+ CConn:       End of stream
+ CConn:       The connection was dropped by the server before the session could
+              be established.
+
+
+X11 forwarding: 
+
+corin@otp-cdobrica-l1:~$ ssh -p 6001 myvnc@localhost
+myvnc@localhost's password: 
+Last login: Tue Jul 26 12:48:02 2022 from 10.0.2.2
+[myvnc@corindobrica ~]$ sudo nano /etc/ssh/ssh_config
+[sudo] password for myvnc:
+
+Host *
+X11Forwarding yes
+X11ForwardingTrusted yes
+
+[myvnc@corindobrica ~]$ sudo nano /etc/ssh/sshd_config
+X11Forwarding yes
+X11ForwardingOffset 10
+
+exit
+
+ssh -p 6001 -X myvnc@localhost
+
+[myvnc@corindobrica ~]$ echo $DISPLAY
+localhost:10.0
+[myvnc@corindobrica ~]$ vncviewer localhost:5901
+
+TigerVNC Viewer 64-bit v1.12.0
+Built on: 2022-05-31 00:00
+Copyright (C) 1999-2021 TigerVNC Team and many others (see README.rst)
+See https://www.tigervnc.org for information on TigerVNC.
+
+Tue Jul 26 13:02:22 2022
+ DecodeManager: Detected 2 CPU core(s)
+ DecodeManager: Creating 2 decoder thread(s)
+ CConn:       Connected to host localhost port 5901
+ CConnection: Server supports RFB protocol version 3.8
+ CConnection: Using RFB protocol version 3.8
+ CConnection: Choosing security type VeNCrypt(19)
+ CVeNCrypt:   Choosing security type VncAuth (2)
+
+Tue Jul 26 13:02:29 2022
+ CConn:       Using pixel format depth 24 (32bpp) little-endian rgb888
+ CConnection: Enabling continuous updates
+ 
+ 
+ SFTP:
+ 
+ corin@otp-cdobrica-l1:~$ sftp -oPort=6001 myvnc@localhost
+myvnc@localhost's password: 
+Connected to localhost.
+sftp> ls
+Desktop      Documents    Downloads    Music        Pictures     Public       Templates    Videos       
+ftp          rootCA.crt   
+sftp> cd Desktop/
+sftp> ls
+sftp> pwd
+Remote working directory: /home/myvnc/Desktop
+sftp> mkdir SFTP_Files
+sftp> ls
+SFTP_Files   
+sftp> cd SFTP_Files/
+sftp> put log.txt
+Uploading log.txt to /home/myvnc/Desktop/SFTP_Files/log.txt
+log.txt                                                               100% 1776   801.6KB/s   00:00    
+sftp> put logsuccesful.txt 
+Uploading logsuccesful.txt to /home/myvnc/Desktop/SFTP_Files/logsuccesful.txt
+logsuccesful.txt                                                      100%  136    40.0KB/s   00:00    
+sftp> get log.txt 
+Fetching /home/myvnc/Desktop/SFTP_Files/log.txt to log.txt
+log.txt                                                               100% 1776   471.5KB/s   00:00    
+sftp> ls
+log.txt             logsuccesful.txt    
+sftp> cd ..
+sftp> ls
+SFTP_Files   
+sftp> put cdobrica.pfx 
+Uploading cdobrica.pfx to /home/myvnc/Desktop/cdobrica.pfx
+cdobrica.pfx                                                          100% 5786     1.4MB/s   00:00    
+sftp> exit
+
+
+
+
+
+
+
+
+
+
+
